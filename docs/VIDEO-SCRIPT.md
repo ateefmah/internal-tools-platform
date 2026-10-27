@@ -14,22 +14,29 @@ worse, because pricing is per-user — every ops analyst you add grows the bill.
 
 ## 2. What we built instead (≈90s)
 
-[B-roll: log in as analyst → home dashboard → open KYC queue]
+[B-roll: switch persona to KYC analyst → home dashboard → open KYC queue]
 
 I had Devin build the same shape as Power Apps — a thin platform with apps on top —
-in about two hours. The platform owns what the platform should: session auth,
-three roles (agent, lead, admin), and a single audit trail every app writes into.
+in about two hours. The platform owns what the platform should: roles mapped to
+your real personas (support, finance, KYC analyst and senior, ops, engineer),
+an append-only audit trail every write lands in, and PII masking by default.
 
-On top of it, the exact three apps you run today. The KYC queue isn't just CRUD —
-**high-risk cases require maker-checker dual control**.
+On top of it: the KYC queue and refunds dashboard you run today, plus
+chargebacks and one app built from a plain-English Slack request — the exact
+shape of your next ten tools. The KYC queue isn't just CRUD — **high-risk cases
+require maker-checker dual control**, and PII fields are masked until someone
+with the permission reveals them, which itself writes an audit row.
 
 [B-roll: analyst approves high-risk case → "awaiting second review"; try to self-approve → blocked;
-switch to lead → confirm → approved; open audit log]
+switch to KYC senior → confirm → approved; click reveal on a masked field; open audit log]
 
-Watch the audit log: every action, every actor, timestamped. The refunds app
-enforces a $500 threshold — analysts can't approve above it, leads can. Feature
-flags are lead/admin only and every toggle is audited. These are the controls a
-fintech actually gets audited on, and in code they're ten lines each.
+Watch the audit log: every action, every actor, timestamped. Refunds enforce
+per-role limits — $100 for a support agent, $5,000 for finance, and anything
+bigger needs approval from someone who isn't the requester. The part I'd
+underline: **a conformance test in CI rejects any write that skips these
+controls** — governance is enforced by the pipeline, not by a checklist. These
+are the controls a fintech actually gets audited on, and in code they're ten
+lines each plus one test.
 
 ## 3. Honest assessment (≈90s)
 
@@ -51,11 +58,13 @@ ownership — and integration sprawl if the tools touch many external systems.
 
 ## 4. Recommendation (≈60s)
 
-**Build, with a hybrid caveat.** For a 60-engineer fintech, the three apps shown —
+**Build, with a hybrid caveat.** For a 60-engineer fintech, the apps shown —
 and most of the ten planned — are exactly the pattern this platform handles:
-auth'd, audited, policy-driven workflow tools. You already run Git and code review,
-so governance is free — every tool is a reviewed PR, not an ungoverned low-code
-sprawl, which is Power Platform's known problem at scale.
+role-gated, audited, policy-driven workflow tools. You already run Git and code
+review, so governance is free — every tool is a reviewed PR plus a conformance
+test, not ungoverned low-code sprawl, which is Power Platform's known problem
+at scale. One note: we deliberately did not rebuild your feature-flag admin —
+that's a solved vendor product, not something to own.
 
 Keep Power Apps — or negotiate it down to a small footprint — only where it earns
 its license: apps that need the connector marketplace, mobile, or business-user

@@ -1,0 +1,24 @@
+# https://docs.devin.ai/onboard-devin/environment-yaml
+# Commands run from the repo root.
+initialize:
+  - uses: github.com/actions/setup-node@v4
+    with:
+      node-version: "20"
+# Install dependencies, including the Playwright chromium binary for e2e.
+maintenance: |
+  npm install
+  npx playwright install chromium
+# Reference info for agent
+knowledge:
+  - name: lint
+    contents: |
+      npm run lint
+  - name: typecheck
+    contents: |
+      npm run typecheck
+  - name: test
+    contents: |
+      npm test
+  - name: e2e
+    contents: |
+      npm run test:e2e

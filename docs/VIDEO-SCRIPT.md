@@ -22,8 +22,8 @@ your real personas (support, finance, KYC analyst and senior, ops, engineer),
 an append-only audit trail every write lands in, and PII masking by default.
 
 On top of it: the KYC queue and refunds dashboard you run today, plus
-chargebacks and one app built from a plain-English Slack request — the exact
-shape of your next ten tools. The KYC queue isn't just CRUD — **high-risk cases
+chargebacks and payout holds — the last built from a plain-English ops request,
+the exact shape of your next ten tools. The KYC queue isn't just CRUD — **high-risk cases
 require maker-checker dual control**, and PII fields are masked until someone
 with the permission reveals them, which itself writes an audit row.
 

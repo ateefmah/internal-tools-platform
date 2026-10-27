@@ -1,0 +1,25 @@
+name: weekly-maintenance
+on:
+  schedule:
+    - cron: "0 9 * * 1" # Mondays 09:00 UTC
+  workflow_dispatch:
+
+# Weekly maintenance: re-verify the platform even when no code changed —
+# dependency advisories and a controls regression should surface without
+# waiting for the next PR.
+jobs:
+  maintain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - name: Dependency advisories
+        run: npm audit --audit-level=high
+        continue-on-error: true

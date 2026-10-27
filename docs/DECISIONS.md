@@ -1,60 +1,66 @@
-# Key Decisions — InternalOps Platform prototype
+# Key Decisions
 
-*One page. Written for evaluators, not the client.*
+For evaluators — what was built, why that scope, and the tradeoffs.
 
-## What I chose to build and why
+## The decision that matters: platform controls as code, enforced by CI
 
-The client's real question isn't "can an AI build a dashboard" — it's "can we stop
-paying for a platform and still ship 13+ internal tools." Power Apps' value is
-mostly in the *platform layer* (identity, access control, audit, hosting, app
-lifecycle), not in any single app. So I built the same shape: **a thin shared
-platform plus three working apps that mirror what they run today** (KYC review
-queue, refunds dashboard, feature-flag admin). If the pattern works for three
-apps that differ in workflow and policy, the next ten are repetition, not risk.
+Power Apps' real value for a 60-engineer fintech is not drag-and-drop. It is
+that a non-engineer can ship a safe app: sign-in, row-level security,
+auditing, and DLP come with the platform. If we evaluate "can Devin build
+internal tools," the honest test is whether the same guarantees exist when
+the platform is code instead of a vendor product.
 
-The prototype was built entirely by Devin in ~2 hours — that fact is itself the
-demo: it shows that "Devin builds the apps" is the replacement for "low-code makes
-them fast."
+So the prototype is not three apps. It is one platform layer
+(`src/lib/require.ts`, `audit.ts`, `mask.ts`, `reveal.ts`) plus a
+conformance test (`tests/controls.spec.ts`) that fails CI if any write skips
+a control. The apps — refunds, KYC queue, chargebacks, expiry alerts — are
+demonstrations that the controls hold, not the point.
 
-## Architectural decisions
+Why this scope: the client's stated use is a KYC queue, a refunds
+dashboard, and a flag admin, with 10+ more planned — all CRUD-with-guardrails
+apps for ops/support/compliance/finance users. The expensive part of owning
+that is not building pages; it is proving every future app stays safe. The
+conformance test is the load-bearing piece: it encodes the AGENTS.md rules
+as executable policy, which is something Power Apps cannot give you (its
+governance lives in admin checklists and the unmaintained CoE Starter Kit).
 
-- **FastAPI + SQLAlchemy + server-rendered Jinja, one process, SQLite.** Zero
-  infrastructure, runs anywhere in one command, easy for a VP to spin up. Models
-  port to Postgres by swapping a connection string — the schema is real, only the
-  driver is demo-grade.
-- **The platform owns identity, RBAC, and audit; apps own workflow and policy.**
-  `agent`/`lead`/`admin` roles, a signed-session dependency, and one `audit_events`
-  table every app writes through a single `audit.log()` call. New apps inherit
-  this for free — same role Dataverse + app registration play in Power Apps.
-- **Controls as the feature.** I deliberately picked the policies a fintech
-  actually needs rather than more CRUD: maker-checker dual approval on high-risk
-  KYC cases (self-approval blocked), a dollar threshold that pushes refund
-  decisions to leads, and fully audited flag toggles. These are trivially
-  expressible in code and awkward/expensive in low-code — exactly the asymmetry
-  that justifies owning the tools.
+## Stack: Next.js + TypeScript + SQLite (drizzle)
 
-## Tradeoffs I made, honestly
+Declared by AGENTS.md, and right for the goal. One language across UI and
+writes, server actions keep the write path auditable in one codebase,
+drizzle keeps the schema portable to Postgres. An earlier iteration used
+FastAPI because the build VM lacked Node; the spec's stack is better for
+this audience — a single TypeScript codebase is what a Devin session
+maintains most cheaply, and it is the stack the client's engineers will
+review.
 
-- **No self-serve for non-engineers.** Power Apps lets an ops analyst drag a UI
-  together. My model requires Devin (or an engineer) per app. At 60 engineers and
-  10+ planned tools, I judged the bottleneck is engineering throughput, which
-  Devin addresses — not citizen development, which this team doesn't obviously need.
-- **Demo-grade auth and secrets.** Cookie sessions and seeded users are honest
-  shortcuts; production means OIDC/SSO, which is a library integration but also
-  means we *own* the auth surface that Microsoft currently manages for them.
-- **Server-rendered, no mobile.** Power Apps gives mobile + accessibility for
-  free. Internal ops tools here are desktop-first, so I traded that away
-  consciously — it's a real gap if they have warehouse/field workflows.
-- **No connector marketplace.** Power Apps' 200+ connectors are the underpriced
-  part of the license. I didn't replicate integration breadth — the honest answer
-  is that each real integration is bespoke API work, partially offset by Devin
-  writing it.
+## Deliberate simplifications and their costs
 
-## The decision I'd defend
+- **Mock SSO**: a cookie-based persona switcher, labeled in the UI. Real
+  Entra/SSO is out of scope but is the first thing a real rollout needs —
+  it is a solved integration problem (Auth.js/Entra ID), not a design risk.
+- **Conformance test is static, not runtime**: it scans source files for the
+  required calls rather than interposing on every request. It can be fooled
+  by a write that calls the functions vacuously. A production version would
+  add route-level middleware; for a prototype the scan catches the real
+  failure mode — a new write that forgets the controls entirely.
+- **SQLite**: fine for a demo, and drizzle makes the Postgres move a config
+  change. Concurrency and scale were not tested; the research doc flags
+  this as a real open question for a build path.
+- **No feature-flag admin**: the spec is right to cut it — a fintech should
+  use a flag vendor's UI (LaunchDarkly, Statsig), not maintain one.
+- **Two-hour timebox honored**: the value claim is that Devin builds and
+  maintains this cheaply, so the prototype has to look like something an
+  agent could produce fast.
 
-Build-vs-buy turns on *who authors the apps*, not on features. A 60-engineer
-fintech that already does code review, Git, and CI gets governance for free in
-code (the Power Platform "sprawl" problem disappears — every tool is a reviewed
-PR). The license savings are real but secondary; the primary gain is that these
-tools become normal software: testable, auditable, diffable, and not hostage to
-per-seat pricing as they scale to hundreds of ops users.
+## What this means for the recommendation
+
+The controls a fintech actually needs (roles, audit, maker-checker, PII
+masking) are small, well-understood, and now enforced by their own CI —
+that is the part Power Apps charges $250K/year to rent. What Power Apps
+still sells and we did not replicate: connectors to hundreds of SaaS
+systems, mobile/offline, per-user governance across dozens of apps, and
+citizen-developer authoring. The recommendation in the research doc and
+video script stands: build the core queue/dashboard apps with Devin, keep
+Power Apps only where its unique surface (connectors, citizen dev) earns
+the license.

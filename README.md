@@ -1,73 +1,81 @@
-# InternalOps Platform
+# InternalOps
 
-A working prototype demonstrating how AI-assisted engineering (Devin) can replace the
-*internal tools* use case of Microsoft Power Apps: a thin shared platform plus small
-purpose-built apps on top of it — here, the exact three apps the client runs today.
+A prototype internal-tools platform for a fintech evaluating a move off
+Microsoft Power Apps. The point is not the apps — it is that platform
+controls (roles, append-only audit, maker-checker, PII masking) are built
+once and enforced by CI, so app #N is a plain-English request plus a page.
 
-**Total build time: ~2 hours with Devin.**
+Synthetic data only. Never real PII.
 
-## What's inside
+## Stack
 
-**The platform layer** (built once, reused by every future app):
-
-- Signed-cookie session auth with PBKDF2-hashed passwords
-- Role-based access control: `agent` < `lead` < `admin`
-- A shared app shell (sidebar nav, user context) every app inherits
-- A single audit table that records *every* mutating action across all apps,
-  viewable at `/audit` by leads and admins
-
-**The three apps**, replicating their current Power Apps:
-
-| App | Route | What it does |
-|---|---|---|
-| KYC Review Queue | `/apps/kyc` | Filterable case queue → case detail → approve/reject. **High-risk cases require maker-checker dual control**: a second, different reviewer must sign off. Self-approval is blocked. |
-| Refunds Dashboard | `/apps/refunds` | Pending-exposure summary, filterable refund table, inline approve/deny. **Refunds ≥ $500 require a lead** — agents are blocked server-side. |
-| Feature Flags | `/apps/flags` | Flag list, create flag, enable/disable. **Lead/admin only**; every toggle writes an audit event with actor and timestamp. |
-
-Plus an **Overview dashboard** (`/`) with live counts across all apps.
+- Next.js (App Router) + TypeScript, server actions for writes
+- SQLite via drizzle-orm + better-sqlite3 (schema is Postgres-ready)
+- Vitest for the controls conformance test
+- One Playwright smoke test
 
 ## Run it
 
 ```bash
-pip install -r requirements.txt
-python -m uvicorn app.main:app --port 8000
-# open http://localhost:8000
+npm install
+npm run dev          # http://localhost:3000
+npm run lint
+npm run typecheck
+npm test             # tests/controls.spec.ts — the CI gate
+npm run test:e2e     # Playwright smoke (starts the dev server itself)
 ```
 
-SQLite database and seed data (14 KYC cases, 12 refunds, 6 flags, 3 users) are
-created automatically on first start. Delete `internalops.db` to reset.
+Sign in via the persona switcher in the header — it is **mock SSO** (a
+cookie), labeled in the UI, per the spec. Try:
 
-**Demo users** (password: `password`):
+- As **support agent**: issue a $42 refund (pays instantly). Then try $250
+  — it goes to `pending_approval`.
+- As **finance manager**: approve that refund. Note you cannot approve a
+  refund you requested yourself.
+- As **KYC analyst**: decide the high-risk case — it moves to
+  `awaiting_second_review`. As the same analyst you cannot clear it.
+- As **KYC senior**: give the second review. Also click "reveal" on the
+  masked email — the reveal is permission-gated and writes an audit row.
+- As **ops manager**: submit a tool request in plain English. As
+  **engineer**: triage it to shipped.
+- `/audit` — every one of those writes, plus the PII reveals and persona
+  switches, in one append-only log.
 
-- `analyst@fintech.dev` — role `agent`: can review low/medium KYC cases, decide refunds < $500
-- `lead@fintech.dev` — role `lead`: second KYC review, high-value refunds, flag toggles, audit log
-- `admin@fintech.dev` — role `admin`: same as lead (extend with user management later)
+## The controls (src/lib)
 
-## Try the important flows
+1. `requireRole()` / `requirePermission()` run server-side before every write.
+2. `audit.record()` is called with the open transaction handle, so the audit
+   row commits atomically with the write. `audit_log` has no update/delete path.
+3. Money movement and PII reveals go through approvals; `assertNotSelfApproval()`
+   blocks the requester from approving their own request.
+4. PII fields are masked in the page (`lib/mask.ts`); revealing calls
+   `lib/reveal.ts`, which requires `pii:reveal` and writes an audit entry.
 
-1. Sign in as `analyst@` → open a **high-risk** KYC case → Approve.
-   Status becomes `awaiting second review`. Try to approve it again → blocked (dual control).
-2. Sign in as `lead@` → same case → Confirm approval → `approved`. Check `/audit`.
-3. As `analyst@` → try to approve a refund marked `HV` → rejected, needs a lead.
-4. As `lead@` → toggle a feature flag → appears in `/audit` with your name and timestamp.
+`tests/controls.spec.ts` scans every source file and fails CI if a DB write
+skips a control, an approval path skips the self-approval check, `audit_log`
+is mutated, a route is missing from `src/apps/registry.ts`, or a page renders
+PII unmasked. **Never weaken or skip it.**
 
-## Deliberate scope choices (and honest limits)
+## Apps (src/apps/registry.ts)
 
-This is a ~2-hour proof of concept, not a production system:
+| App | Where it came from |
+| --- | --- |
+| Refunds | Playbook — per-role limits, maker-checker above $100 |
+| KYC Review Queue | Playbook — dual review on high-risk cases |
+| Chargebacks | Playbook — contest then resolve by a different teammate |
+| Expiry Alerts | Built from a plain-English Slack request — see docs/slack-request.md |
+| Tool Requests | Platform intake — how app #N gets requested |
+| Audit Log | Platform — every controlled write |
 
-- **Auth is demo-grade.** Real deployment = OIDC/SSO (Okta, Entra ID) — a standard
-  library integration, not a platform feature you'd miss.
-- **SQLite** keeps the demo zero-dependency; SQLAlchemy models move to Postgres by
-  changing one connection string.
-- **No drag-and-drop app builder** — that's the point. Devin *generates* each new app
-  on this platform in hours, which replaces the speed Power Apps gets from low-code,
-  while giving you real code, real tests, and Git history.
-- Server-rendered UI on purpose: internal tools don't need a SPA. If a future app
-  does, nothing here prevents it.
+## Maintenance
 
-## The pattern for the next 10 apps
+`.github/workflows/weekly-maintenance.yml` runs every Monday 09:00 UTC:
+lint, typecheck, the controls test, and `npm audit` — a controls or
+dependency regression surfaces without waiting for the next PR. `ci.yml`
+runs the same gates on every push/PR.
 
-Each new tool = a new module under `app/apps/` + a nav entry. Auth, RBAC, audit,
-and the shell are already done. This is the same "platform + apps" structure Power
-Apps gives you — except the platform is 300 lines of code you own, instead of a
-$250K/year license.
+## What is deliberately not here
+
+Real SSO (mocked persona switcher), deployment (documented, not built),
+a feature-flag admin (use the flag vendor's UI), a drag-and-drop builder,
+and notifications. See `docs/DECISIONS.md` for the reasoning.

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Overview</h1>
+<p class="muted">All internal apps in one workspace. {{ user.name }}, you're signed in as <b>{{ user.role }}</b>.</p>
+<div class="cards">
+  <a class="card" href="/apps/kyc">
+    <div class="card-num">{{ pending_kyc }}</div>
+    <div class="card-label">KYC cases in queue</div>
+    <div class="card-go">Open KYC Review Queue →</div>
+  </a>
+  <a class="card" href="/apps/refunds">
+    <div class="card-num">{{ pending_refunds }}</div>
+    <div class="card-label">Pending refund requests</div>
+    <div class="card-go">Open Refunds Dashboard →</div>
+  </a>
+  <a class="card" href="/apps/flags">
+    <div class="card-num">{{ flags_on }}<span class="dim">/{{ flags_total }}</span></div>
+    <div class="card-label">Feature flags enabled</div>
+    <div class="card-go">Open Feature Flags →</div>
+  </a>
+</div>
+{% endblock %}

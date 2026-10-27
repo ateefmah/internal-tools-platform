@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Refunds Dashboard</h1>
+{% if request.query_params.get('error') == 'highvalue' %}
+<div class="alert">Refunds over ${{ '%.0f' % (threshold/100) }} require a lead or admin to decide.</div>
+{% endif %}
+<div class="statline">
+  <span>Pending exposure: <b>${{ '%.2f' % (pending_total/100) }}</b></span>
+  <span class="muted">Approvals over ${{ '%.0f' % (threshold/100) }} need a lead.</span>
+</div>
+<form class="filters" method="get">
+  <select name="status" onchange="this.form.submit()">
+    <option value="">All statuses</option>
+    {% for s in ['pending', 'approved', 'denied'] %}
+    <option value="{{ s }}" {{ 'selected' if status == s }}>{{ s }}</option>
+    {% endfor %}
+  </select>
+</form>
+<table>
+  <thead><tr>
+    <th>Customer</th><th>Ref</th><th>Amount</th><th>Reason</th><th>Status</th><th>Requested</th><th></th>
+  </tr></thead>
+  <tbody>
+  {% for r in refunds %}
+    <tr>
+      <td>{{ r.customer_name }}</td>
+      <td class="mono">{{ r.customer_ref }}</td>
+      <td class="mono">${{ '%.2f' % (r.amount_cents/100) }}
+        {% if r.amount_cents >= threshold %}<span class="pill risk-high" title="High value">HV</span>{% endif %}</td>
+      <td>{{ r.reason }}</td>
+      <td>
+        <span class="pill st-{{ r.status }}">{{ r.status }}</span>
+        {% if r.decided_by %}<div class="muted small">by {{ r.decided_by }}</div>{% endif %}
+      </td>
+      <td class="muted">{{ r.requested_at.strftime('%b %d, %H:%M') }}</td>
+      <td>
+        {% if r.status == 'pending' %}
+        <form method="post" action="/apps/refunds/{{ r.id }}/decide" class="inline">
+          <button name="decision" value="approve" class="btn-ok sm">Approve</button>
+          <button name="decision" value="deny" class="btn-bad sm">Deny</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

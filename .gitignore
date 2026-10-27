@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+internalops.db
+.venv/

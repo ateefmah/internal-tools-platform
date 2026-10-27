@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Feature Flags</h1>
+<p class="muted">Toggling requires lead or admin. Every change is written to the audit log.</p>
+{% if user.role in ('lead', 'admin') %}
+<form method="post" action="/apps/flags/new" class="newflag">
+  <input name="key" placeholder="new_flag_key" required>
+  <input name="description" placeholder="Description" class="grow">
+  <button>Create flag</button>
+</form>
+{% endif %}
+<table>
+  <thead><tr><th>Key</th><th>Description</th><th>State</th><th>Last change</th><th></th></tr></thead>
+  <tbody>
+  {% for f in flags %}
+    <tr>
+      <td class="mono">{{ f.key }}</td>
+      <td>{{ f.description }}</td>
+      <td><span class="pill {{ 'st-approved' if f.enabled else 'st-rejected' }}">
+        {{ 'enabled' if f.enabled else 'disabled' }}</span></td>
+      <td class="muted small">{{ f.updated_by }}{% if f.updated_at %} · {{ f.updated_at.strftime('%b %d, %H:%M') }}{% endif %}</td>
+      <td>
+        {% if user.role in ('lead', 'admin') %}
+        <form method="post" action="/apps/flags/{{ f.id }}/toggle" class="inline">
+          <button class="sm">{{ 'Disable' if f.enabled else 'Enable' }}</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

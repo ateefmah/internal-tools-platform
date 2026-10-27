@@ -10,4 +10,30 @@ export type RegisteredApp = {
   origin?: string;
 };
 
-export const APPS: RegisteredApp[] = [];
+export const APPS: RegisteredApp[] = [
+  {
+    slug: "refunds",
+    name: "Refunds",
+    kind: "app",
+    description: "Search charges and refund with a reason code; per-role limits and maker-checker.",
+    owner: "finance",
+    status: "live",
+    origin: "playbook",
+  },
+  {
+    slug: "audit",
+    name: "Audit Log",
+    kind: "platform",
+    description: "Append-only record of every controlled write.",
+    owner: "engineering",
+    status: "live",
+  },
+  {
+    slug: "sign-in",
+    name: "Sign in",
+    kind: "platform",
+    description: "Mock SSO persona sign-in for the demo.",
+    owner: "engineering",
+    status: "live",
+  },
+];

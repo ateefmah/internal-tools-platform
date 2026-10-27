@@ -17,7 +17,7 @@ import { APPS } from "../src/apps/registry";
  * Rule 5: every route directory under src/app must be registered in
  *         src/apps/registry.ts.
  * Rule 6: pages that render PII fields (email, taxId) must mask them —
- *         raw values are only returned by src/lib/reveal.ts.
+ *         raw values are only returned by src/platform/reveal.ts.
  */
 
 const ROOT = join(__dirname, "..");
@@ -42,13 +42,15 @@ const SRC_FILES = walk(join(ROOT, "src"))
   // itself (it IS the control), the schema, and bootstrap/seed code.
   .filter(
     (p) =>
-      !p.endsWith("lib/audit.ts") &&
+      !p.endsWith("platform/audit.ts") &&
       !p.endsWith("db/seed.ts") &&
       !p.endsWith("db/schema.ts") &&
       !p.endsWith("db/index.ts")
   );
 
-const MUTATION = /\.(insert|update|delete)\(/;
+// Match drizzle mutations on a db/tx handle — not Map.delete, crypto .update,
+// or cookie jar.delete which are unrelated to the database.
+const MUTATION = /\b(db|tx)\.(insert|update|delete)\(/;
 
 describe("platform controls", () => {
   it("every DB write is guarded by requireRole/requirePermission", () => {
@@ -110,7 +112,7 @@ describe("platform controls", () => {
     }
   });
 
-  it("pages rendering PII mask it (reveal only via lib/reveal)", () => {
+  it("pages rendering PII mask it (reveal only via platform/reveal)", () => {
     const pageFiles = walk(join(ROOT, "src", "app")).map((p) => relative(ROOT, p));
     for (const file of pageFiles) {
       const src = readFileSync(join(ROOT, file), "utf8");

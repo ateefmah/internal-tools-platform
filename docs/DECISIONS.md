@@ -13,7 +13,7 @@ the platform is code instead of a vendor product.
 So the prototype is not three apps. It is one platform layer
 (`src/lib/require.ts`, `audit.ts`, `mask.ts`, `reveal.ts`) plus a
 conformance test (`tests/controls.spec.ts`) that fails CI if any write skips
-a control. The apps — refunds, KYC queue, chargebacks, expiry alerts — are
+a control. The apps — refunds, KYC queue, chargebacks, payout holds — are
 demonstrations that the controls hold, not the point.
 
 Why this scope: the client's stated use is a KYC queue, a refunds
@@ -28,8 +28,7 @@ governance lives in admin checklists and the unmaintained CoE Starter Kit).
 
 Declared by AGENTS.md, and right for the goal. One language across UI and
 writes, server actions keep the write path auditable in one codebase,
-drizzle keeps the schema portable to Postgres. An earlier iteration used
-FastAPI because the build VM lacked Node; the spec's stack is better for
+drizzle keeps the schema portable to Postgres. The spec's stack is right for
 this audience — a single TypeScript codebase is what a Devin session
 maintains most cheaply, and it is the stack the client's engineers will
 review.

@@ -35,10 +35,17 @@ export default async function VendorContractsPage() {
       return { ...c, daysLeft, noticeLeft: daysLeft - c.noticeDays };
     })
     .sort((a, b) => a.daysLeft - b.daysLeft);
-  const due = all.filter((c) => c.daysLeft <= WINDOW_DAYS);
+  const isOpen = (c: (typeof all)[number]) => c.status === "active" || c.status === "decision_pending";
+  // Past renewal dates stay listed only while the contract still has no final decision.
+  const due = all.filter((c) => c.daysLeft <= WINDOW_DAYS && (c.daysLeft >= 0 || isOpen(c)));
   const later = all.length - due.length;
   const undecided = due.filter((c) => c.status === "active");
-  const noticeMissed = undecided.filter((c) => c.autoRenew && c.noticeLeft < 0);
+  const noticeMissed = due.filter(
+    (c) =>
+      c.autoRenew &&
+      c.noticeLeft < 0 &&
+      (c.status === "active" || (c.status === "decision_pending" && c.decision === "cancel"))
+  );
 
   return (
     <>
@@ -86,7 +93,7 @@ export default async function VendorContractsPage() {
               <td>
                 {c.noticeDays} days{" "}
                 {c.autoRenew ? <span className="pill">auto-renews</span> : <span className="pill">manual</span>}
-                {c.status === "active" && (
+                {isOpen(c) && (
                   <div className={c.noticeLeft < 0 ? "due-soon" : c.noticeLeft <= 7 ? "due-soon" : "muted"}>
                     {c.noticeLeft < 0 ? "notice deadline passed" : `notice due in ${c.noticeLeft} days`}
                   </div>

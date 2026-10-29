@@ -17,10 +17,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <main className="container">
+        <div className="shell">
           <Nav />
-          {children}
-        </main>
+          <div className="content">
+            <main className="container">{children}</main>
+          </div>
+        </div>
       </body>
     </html>
   );

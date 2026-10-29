@@ -84,6 +84,30 @@ export function seed(d: typeof db) {
     ])
     .run();
 
+  const contract = (
+    id: string, vendor: string, service: string, contactEmail: string,
+    annualValueCents: number, renewsInDays: number, noticeDays: number, autoRenew: boolean,
+  ) => ({
+    id, vendor, service, ownerId: "u-tom", contactEmail, annualValueCents,
+    renewalDate: daysFromNow(renewsInDays), noticeDays, autoRenew,
+    status: "active", decision: null, decisionNote: null, requestedBy: null,
+    signedOffBy: null, createdAt: daysAgo(300),
+  });
+  d.insert(schema.vendorContracts)
+    .values([
+      contract("vc-6001", "Northwind Cloud", "Card-data hosting", "renewals@northwind.example.com", 18_400_000, 4, 30, true),
+      contract("vc-6002", "Lumen KYC Data", "Identity verification API", "accounts@lumenkyc.example.com", 9_600_000, 11, 7, true),
+      contract("vc-6003", "Pinecrest Legal", "Outside counsel retainer", "billing@pinecrest.example.com", 2_400_000, 19, 14, false),
+      contract("vc-6004", "Quarry Analytics", "BI dashboards", "cs@quarry.example.com", 1_150_000, 27, 30, true),
+      {
+        ...contract("vc-6005", "Atlas Fraud Signals", "Device fingerprinting", "sales@atlasfraud.example.com", 6_200_000, 15, 30, true),
+        status: "decision_pending", decision: "cancel",
+        decisionNote: "Overlaps with Lumen; consolidating.", requestedBy: "u-tom",
+      },
+      contract("vc-6006", "Harbor Print Co", "Statement printing", "orders@harborprint.example.com", 380_000, 74, 30, false),
+    ])
+    .run();
+
   d.insert(schema.toolRequests)
     .values([
       {

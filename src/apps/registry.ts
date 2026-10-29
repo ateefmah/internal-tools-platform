@@ -68,4 +68,13 @@ export const APPS: RegisteredApp[] = [
     status: "live",
     origin: "requested in plain English by ops (tool_requests intake)",
   },
+  {
+    slug: "vendor-contracts",
+    name: "Vendor renewals",
+    kind: "app",
+    description: "Vendor contracts renewing in the next 30 days; renew/cancel decisions need finance sign-off.",
+    owner: "ops",
+    status: "live",
+    origin: "requested in plain English by ops (Slack #all-internal-tool-requests)",
+  },
 ];

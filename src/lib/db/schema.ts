@@ -92,3 +92,21 @@ export const toolRequests = sqliteTable("tool_requests", {
   status: text("status").notNull().default("new"), // new | in_build | shipped | declined
   createdAt: text("created_at").notNull(),
 });
+
+export const vendorContracts = sqliteTable("vendor_contracts", {
+  id: text("id").primaryKey(),
+  vendor: text("vendor").notNull(),
+  service: text("service").notNull(),
+  ownerId: text("owner_id").notNull(),
+  contactEmail: text("contact_email").notNull(),
+  annualValueCents: integer("annual_value_cents").notNull(),
+  renewalDate: text("renewal_date").notNull(), // YYYY-MM-DD
+  noticeDays: integer("notice_days").notNull(),
+  autoRenew: integer("auto_renew", { mode: "boolean" }).notNull(),
+  status: text("status").notNull().default("active"), // active | decision_pending | renewed | cancelled
+  decision: text("decision"), // renew | cancel
+  decisionNote: text("decision_note"),
+  requestedBy: text("requested_by"),
+  signedOffBy: text("signed_off_by"),
+  createdAt: text("created_at").notNull(),
+});

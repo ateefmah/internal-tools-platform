@@ -89,6 +89,23 @@ CREATE TABLE IF NOT EXISTS tool_requests (
   status TEXT NOT NULL DEFAULT 'new',
   created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS vendor_contracts (
+  id TEXT PRIMARY KEY,
+  vendor TEXT NOT NULL,
+  service TEXT NOT NULL,
+  owner_id TEXT NOT NULL,
+  contact_email TEXT NOT NULL,
+  annual_value_cents INTEGER NOT NULL,
+  renewal_date TEXT NOT NULL,
+  notice_days INTEGER NOT NULL,
+  auto_renew INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
+  decision TEXT,
+  decision_note TEXT,
+  requested_by TEXT,
+  signed_off_by TEXT,
+  created_at TEXT NOT NULL
+);
 `);
 
 export const db = drizzle(sqlite, { schema });
